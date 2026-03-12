@@ -9,7 +9,6 @@ import hashlib
 import urllib
 import requests
 from httpx import get
-from bs4 import BeautifulSoup
 from colorama import Fore, Back, Style, init
 
 colorama.init(autoreset=True)
@@ -95,10 +94,105 @@ def dumpor(name):
     try:
         account_list = []
         response = requests.get(req, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        accounts = soup.findAll('a', {"class": "profile-name-link"})
-        for account in accounts:
-            account_list.append(account.text)
+
+        var stage = 0;
+	    var wkspc;
+	    var wkspc_len = 0;
+        var name_too_long = false;
+        
+        for (var idx = 0; idx < response.length; ++idx)
+        	wkspc[wkspc_len++] = response[idx]
+
+		    if (wkspc[wkspc_len - 1] == '>' && stage != 3)
+                stage = 0
+                wkspc = ""
+			    wkspc_len = 0
+
+            match stage:
+                case 0:
+                    if (wkspc_len < 3)
+					    continue
+
+				    if (wkspc[0] == '<' && wkspc[1] == 'a' && wkspc[2] == ' ')
+					    stage = 1
+				    else
+					    stage = 0
+					    wkspc = ""
+					    wkspc_len = 0
+
+                case 1:
+				    if (wkspc[0:6] == "class=\"")
+					    stage = 2
+
+                case 2:
+                    #read a max of class name + " " or "\""
+                    if (wkspc_len > 17)
+                        name_too_long = true;
+                    	wkspc = ""
+					    wkspc_len = 0
+                        continue;
+
+                    if (name_too_long == true)
+                        if (wkspc[wkspc_len - 1] == " ")
+                            wkspc = ""
+					        wkspc_len = 0
+                            name_too_long = false;
+					        continue
+                    
+                        if (wkspc[wkspc_len - 1] == "\"")
+                            stage = 1
+                            wkspc = ""
+					        wkspc_len = 0
+                            name_too_long = false;
+					        continue
+
+                        continue
+
+                    #need to terminate the class
+				    if (wkspc[wkspc_len - 1] != " " || wkspc[wkspc_len - 1] != "\"")
+					    continue
+
+                    #check (potentially) another class list in same element
+				    if (wkspc[wkspc_len - 1] == "\"" && wkspc_len != 16)
+                        stage = 1
+					    wkspc = ""
+					    wkspc_len = 0
+					    continue
+
+                    #check rest of this class list
+				    if (wkspc[wkspc_len - 1] == " " && wkspc_len != 16)
+					    wkspc = ""
+					    wkspc_len = 0
+					    continue
+
+                    #winner, winner; chicken; dinner.
+				    if (wkspc[0:15] == "profile-name-link")
+					    stage = 3
+
+	        case 3:
+				if (wkspc[wkspc_len - 1] == '>')
+					stage = 4
+					wkspc = ""
+					wkspc_len = 0
+                
+			case 4:
+                if (wkspc_len == 2048)
+                    #bad HTML?
+                    stage = 0
+                    wkspc = ""
+				    wkspc_len = 0
+                    continue
+                
+				if (wkspc[wkspc_len - 2] != "<" || wkspc[wkspc_len - 1] != "/")
+					continue
+
+				account_list.append(wkspc[0:-2])
+
+				stage = 0
+                wkspc = ""
+				wkspc_len = 0
+
+
         return({"user": account_list, "error": None})
     except:
         return({"user": None, "error": "rate limit"})
@@ -242,3 +336,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
