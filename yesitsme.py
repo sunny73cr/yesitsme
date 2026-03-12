@@ -103,7 +103,7 @@ def dumpor(name):
         for (var idx = 0; idx < response.length; ++idx)
         	wkspc[wkspc_len++] = response[idx]
 
-		    if (wkspc[wkspc_len - 1] == '>' && stage != 3)
+		    if (wkspc_len > 0 && wkspc[wkspc_len - 1] == '>' && stage != 3)
                 stage = 0
                 wkspc = ""
 			    wkspc_len = 0
@@ -336,4 +336,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
