@@ -98,7 +98,6 @@ def dumpor(name):
         var stage = 0;
 	    var wkspc;
 	    var wkspc_len = 0;
-        var name_too_long = false;
 		var PROFILE_LINK_LIMIT__LENGTH = 2048;
         
         for (var idx = 0; idx < response.length; ++idx)
@@ -112,9 +111,21 @@ def dumpor(name):
 
 			if (chevved == false && wkspc[wkspc_len - 1] == "<")
 				chevved = true
-
+		
 			if (chevved == true && wkspc[wkspc_len - 1] == ">")
+				tagged = true
 				chevved = false
+
+			if (tagged == true && wkspc[wkspc_len - 2] == "<" && wkspc[wkspc_len - 1] == "/")
+				if (skip_close_tags)
+					skipping_close_tag = true
+		
+				tagged = false
+
+			if (skipping_close_tag == true && wkspc[wkspc_len - 1] == ">")
+				wkspc = ""
+				wkspc_len = 0
+				skipping_close_tag = false
 
             match stage:
                 case 0:
@@ -172,6 +183,8 @@ def dumpor(name):
 
 	        	case 3:
 					if (wkspc[wkspc_len - 1] == '>')
+						#is tagged, but treat as untagged
+						tagged = false
 						stage = 4
 						wkspc = ""
 						wkspc_len = 0
@@ -187,7 +200,11 @@ def dumpor(name):
 						wkspc_len = 0
 						continue
 
-					if (wkspc[wkspc_len - 2] != "<" || wkspc[wkspc_len - 1] != "/")
+					#seeking 'top-level' text: untagged
+					if (tagged == true || skipping_close_tag == true)
+						continue
+
+					if (wkspc_len > (PROFILE_LINK_MIN__LENGTH + 2) && wkspc[wkspc_len - 2] == "<" && wkspc[wkspc_len - 1] == "/")
 						account_list.append(wkspc[0:-2])
 						stage = 0
     	            	wkspc = ""
@@ -336,6 +353,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
