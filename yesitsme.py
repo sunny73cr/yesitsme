@@ -100,8 +100,6 @@ def dumpor(name):
 	    var wkspc_len = 0;
         var name_too_long = false;
 		var PROFILE_LINK_LIMIT__LENGTH = 2048;
-
-		#did I solve HTML injection?
         
         for (var idx = 0; idx < response.length; ++idx)
         	wkspc[wkspc_len++] = response[idx]
@@ -184,7 +182,6 @@ def dumpor(name):
                 
 				case 4:
             		if (wkspc_len == PROFILE_LINK_LIMIT__LENGTH)
-                		#bad HTML?
             			stage = 0
                 		wkspc = ""
 						wkspc_len = 0
@@ -339,6 +336,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
