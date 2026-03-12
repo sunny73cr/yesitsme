@@ -99,34 +99,43 @@ def dumpor(name):
 	    var wkspc;
 	    var wkspc_len = 0;
         var name_too_long = false;
+		var PROFILE_LINK_LIMIT__LENGTH = 2048;
+
+		#HTML injection and
         
         for (var idx = 0; idx < response.length; ++idx)
         	wkspc[wkspc_len++] = response[idx]
 
-		    if (wkspc_len > 0 && wkspc[wkspc_len - 1] == '>' && stage != 3)
-                stage = 0
-                wkspc = ""
-			    wkspc_len = 0
+			if (quoted == false && wkspc[wkspc_len - 1] == "\"")
+				quoted = true
+
+			if (quoted == true && wkspc[wkspc_len - 1] == "\"")
+				quoted = false
+
+			if (chevved == false && wkspc[wkspc_len - 1] == "<")
+				chevved = true
+
+			if (chevved == true && wkspc[wkspc_len - 1] == ">")
+				chevved = false
 
             match stage:
                 case 0:
                     if (wkspc_len < 3)
 					    continue
 
-				    if (wkspc[0] == '<' && wkspc[1] == 'a' && wkspc[2] == ' ')
+				    if (chevved == true && quoted == false && wkspc[0] == '<' && wkspc[1] == 'a' && wkspc[2] == ' ')
 					    stage = 1
 						wkspc = ""
 					    wkspc_len = 0
 						continue
 					
 				    else
-					    stage = 0
 					    wkspc = ""
 					    wkspc_len = 0
 						continue
 
                 case 1:
-				    if (wkspc_len == 7 && wkspc[0:6] == "class=\"")
+				    if (chevved == true && quoted == true && wkspc_len == 7 && wkspc[0:6] == "class=\"")
 					    stage = 2
 						continue
 
@@ -134,80 +143,58 @@ def dumpor(name):
 						wkspc = ""
 						wkspc_len = 0
 						continue
+
+					if (wkspc[wkspc_len - 1] == ">")
+						stage = 0
+						wkspc = ""
+						wkspc_len = 0
+						continue
             
 				case 2:
-					if (wkspc_len < 17)
+					if (wkspc_len != 18)
 						continue
-					
-                    #read a max of class name + " " or "\""
-                    if (wkspc_len > 17)
-                        name_too_long = true
-                    	wkspc = ""
-					    wkspc_len = 0
-                        continue
 
-                    if (name_too_long == true)
-                        if (wkspc[wkspc_len - 1] == " ")
-                            wkspc = ""
-					        wkspc_len = 0
-                            name_too_long = false
-					        continue
-                    
-                        else if (wkspc[wkspc_len - 1] == "\"")
-                            stage = 1
-                            wkspc = ""
-					        wkspc_len = 0
-                            name_too_long = false
-					        continue
-
-                        else
-							continue
-
-                    #need to terminate the class
-				    if (wkspc[wkspc_len - 1] != " " || wkspc[wkspc_len - 1] != "\"")
-					    continue
-
-                    #check (potentially) another class list in same element
-				    if (wkspc[wkspc_len - 1] == "\"" && wkspc_len != 16)
-                        stage = 1
-					    wkspc = ""
+				    if (wkspc[wkspc_len - 1] != " " && wkspc[wkspc_len - 1] != "\"")
+						wkspc = ""
 					    wkspc_len = 0
 					    continue
 
-                    #check rest of this class list
-				    if (wkspc[wkspc_len - 1] == " " && wkspc_len != 16)
-					    wkspc = ""
+					if (wkspc[wkspc_len - 1] == "\"" && quoted == true)
+						stage = 1
+						wkspc = ""
 					    wkspc_len = 0
 					    continue
 
                     #winner, winner; chicken; dinner.
-				    if (wkspc[0:15] == "profile-name-link")
-					    stage = 3
+				    if (wkspc[0:16] == "profile-name-link")
+						stage = 3
+						wkspc = ""
+					    wkspc_len = 0
 						continue
 
-	        case 3:
-				if (wkspc[wkspc_len - 1] == '>')
-					stage = 4
-					wkspc = ""
-					wkspc_len = 0
+	        	case 3:
+					if (wkspc[wkspc_len - 1] == '>')
+						stage = 4
+						wkspc = ""
+						wkspc_len = 0
+
+					if (wkspc_len == 4)
+						wkspc = ""
+						wkspc_len = 0
                 
-			case 4:
-                if (wkspc_len == 2048)
-                    #bad HTML?
-                    stage = 0
-                    wkspc = ""
-				    wkspc_len = 0
-                    continue
-                
-				if (wkspc[wkspc_len - 2] != "<" || wkspc[wkspc_len - 1] != "/")
-					continue
+				case 4:
+            		if (wkspc_len == PROFILE_LINK_LIMIT__LENGTH)
+                		#bad HTML?
+            			stage = 0
+                		wkspc = ""
+						wkspc_len = 0
+						continue
 
-				account_list.append(wkspc[0:-2])
-
-				stage = 0
-                wkspc = ""
-				wkspc_len = 0
-
+					if (wkspc[wkspc_len - 2] != "<" || wkspc[wkspc_len - 1] != "/")
+						account_list.append(wkspc[0:-2])
+						stage = 0
+    	            	wkspc = ""
+						wkspc_len = 0
 
         return({"user": account_list, "error": None})
     except:
@@ -352,6 +339,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
