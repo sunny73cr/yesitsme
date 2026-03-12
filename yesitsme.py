@@ -95,10 +95,23 @@ def dumpor(name):
         account_list = []
         response = requests.get(req, headers=headers)
 
+		#e.g. https://www.instagram.com/profile/my_user_account
+		var PROFILE_LINK_MIN__LENGTH = 64;
+		var PROFILE_LINK_MAX__LENGTH = 2048;
+		#Parse state
         var stage = 0;
 	    var wkspc;
 	    var wkspc_len = 0;
-		var PROFILE_LINK_LIMIT__LENGTH = 2048;
+		#
+		var quoted = false;
+		var chevved = false;
+		var tagged = false;
+		var skipping_close_tag = false;
+		#
+		#Parse tree state
+		#def node_root = 0, node_head = 1, node_body = 2, node_foot = 3, node_a = 4, node_div = 5, node_span = 6, node_select = 7, node_input = 8 
+		#e.g. var depth_tracker = [ node_root, node_body, node_div, node_span ]
+		#
         
         for (var idx = 0; idx < response.length; ++idx)
         	wkspc[wkspc_len++] = response[idx]
@@ -144,7 +157,13 @@ def dumpor(name):
 						continue
 
                 case 1:
-				    if (chevved == true && quoted == true && wkspc_len == 7 && wkspc[0:6] == "class=\"")
+					if (wkspc_len < 7 && wkspc[wkspc_len - 1] == ">")
+						stage = 0
+						wkspc = ""
+						wkspc_len = 0
+						continue
+					
+				    if (wkspc_len == 7 && chevved == true && quoted == true && wkspc[0:6] == "class=\"")
 					    stage = 2
 						continue
 
@@ -152,34 +171,41 @@ def dumpor(name):
 						wkspc = ""
 						wkspc_len = 0
 						continue
-
-					if (wkspc[wkspc_len - 1] == ">")
-						stage = 0
-						wkspc = ""
-						wkspc_len = 0
-						continue
             
 				case 2:
-					if (wkspc_len != 18)
+					if (wkspc_len < 18)
+						if (wkspc[wkspc_len - 1] == "\"")
+							stage = 1
+							wkspc = ""
+							wkspc_len = 0
+
 						continue
 
-				    if (wkspc[wkspc_len - 1] != " " && wkspc[wkspc_len - 1] != "\"")
+				    if (wkspc_len == 18)
+						if (wkspc[wkspc_len - 1] != " " && wkspc[wkspc_len - 1] != "\"")
+							wkspc = ""
+					    	wkspc_len = 0
+					    	continue
+
+						if (wkspc[wkspc_len - 1] == "\"" && quoted == true)
+							stage = 0
+							wkspc = ""
+					    	wkspc_len = 0
+					    	continue
+
+                    	#winner, winner; chicken; dinner.
+				    	if (wkspc[0:16] == "profile-name-link")
+							stage = 3
+							wkspc = ""
+					    	wkspc_len = 0
+							continue
+
+						continue
+
+					if (wkspc_len > 18)
 						wkspc = ""
 					    wkspc_len = 0
 					    continue
-
-					if (wkspc[wkspc_len - 1] == "\"" && quoted == true)
-						stage = 1
-						wkspc = ""
-					    wkspc_len = 0
-					    continue
-
-                    #winner, winner; chicken; dinner.
-				    if (wkspc[0:16] == "profile-name-link")
-						stage = 3
-						wkspc = ""
-					    wkspc_len = 0
-						continue
 
 	        	case 3:
 					if (wkspc[wkspc_len - 1] == '>')
@@ -188,13 +214,16 @@ def dumpor(name):
 						stage = 4
 						wkspc = ""
 						wkspc_len = 0
+						continue
 
 					if (wkspc_len == 4)
 						wkspc = ""
 						wkspc_len = 0
+
+					continue
                 
 				case 4:
-            		if (wkspc_len == PROFILE_LINK_LIMIT__LENGTH)
+            		if (wkspc_len == PROFILE_LINK_MAX__LENGTH)
             			stage = 0
                 		wkspc = ""
 						wkspc_len = 0
@@ -204,7 +233,7 @@ def dumpor(name):
 					if (tagged == true || skipping_close_tag == true)
 						continue
 
-					if (wkspc_len > (PROFILE_LINK_MIN__LENGTH + 2) && wkspc[wkspc_len - 2] == "<" && wkspc[wkspc_len - 1] == "/")
+					if (wkspc_len >= (PROFILE_LINK_MIN__LENGTH + 1) && wkspc[wkspc_len - 1] == "<")
 						account_list.append(wkspc[0:-2])
 						stage = 0
     	            	wkspc = ""
@@ -353,6 +382,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
