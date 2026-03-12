@@ -115,16 +115,29 @@ def dumpor(name):
 
 				    if (wkspc[0] == '<' && wkspc[1] == 'a' && wkspc[2] == ' ')
 					    stage = 1
+						wkspc = ""
+					    wkspc_len = 0
+						continue
+					
 				    else
 					    stage = 0
 					    wkspc = ""
 					    wkspc_len = 0
+						continue
+
+					continue
 
                 case 1:
-				    if (wkspc[0:6] == "class=\"")
+				    if (wkspc_len == 7 && wkspc[0:6] == "class=\"")
 					    stage = 2
+						continue
 
-                case 2:
+					if (wkspc_len > 7)
+						wkspc = ""
+						wkspc_len = 0
+						continue
+            
+				case 2:
                     #read a max of class name + " " or "\""
                     if (wkspc_len > 17)
                         name_too_long = true;
@@ -336,5 +349,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
