@@ -125,8 +125,6 @@ def dumpor(name):
 					    wkspc_len = 0
 						continue
 
-					continue
-
                 case 1:
 				    if (wkspc_len == 7 && wkspc[0:6] == "class=\"")
 					    stage = 2
@@ -138,28 +136,32 @@ def dumpor(name):
 						continue
             
 				case 2:
+					if (wkspc_len < 17)
+						continue
+					
                     #read a max of class name + " " or "\""
                     if (wkspc_len > 17)
-                        name_too_long = true;
+                        name_too_long = true
                     	wkspc = ""
 					    wkspc_len = 0
-                        continue;
+                        continue
 
                     if (name_too_long == true)
                         if (wkspc[wkspc_len - 1] == " ")
                             wkspc = ""
 					        wkspc_len = 0
-                            name_too_long = false;
+                            name_too_long = false
 					        continue
                     
-                        if (wkspc[wkspc_len - 1] == "\"")
+                        else if (wkspc[wkspc_len - 1] == "\"")
                             stage = 1
                             wkspc = ""
 					        wkspc_len = 0
-                            name_too_long = false;
+                            name_too_long = false
 					        continue
 
-                        continue
+                        else
+							continue
 
                     #need to terminate the class
 				    if (wkspc[wkspc_len - 1] != " " || wkspc[wkspc_len - 1] != "\"")
@@ -181,6 +183,7 @@ def dumpor(name):
                     #winner, winner; chicken; dinner.
 				    if (wkspc[0:15] == "profile-name-link")
 					    stage = 3
+						continue
 
 	        case 3:
 				if (wkspc[wkspc_len - 1] == '>')
@@ -349,6 +352,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
