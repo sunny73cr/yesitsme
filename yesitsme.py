@@ -98,146 +98,125 @@ def dumpor(name):
 		#e.g. https://www.instagram.com/profile/my_user_account
 		var PROFILE_LINK_MIN__LENGTH = 64;
 		var PROFILE_LINK_MAX__LENGTH = 2048;
+		var len_profile_link = 0;
 		#Parse state
         var stage = 0;
-	    var wkspc;
-	    var wkspc_len = 0;
 		#
 		var quoted = false;
 		var chevved = false;
 		var tagged = false;
+		var skip_close_tags = true;
 		var skipping_close_tag = false;
+		var cnt_nested_elements = 0;
 		#
 		#Parse tree state
 		#def node_root = 0, node_head = 1, node_body = 2, node_foot = 3, node_a = 4, node_div = 5, node_span = 6, node_select = 7, node_input = 8 
 		#e.g. var depth_tracker = [ node_root, node_body, node_div, node_span ]
 		#
-        
-        for (var idx = 0; idx < response.length; ++idx)
-        	wkspc[wkspc_len++] = response[idx]
 
-			if (quoted == false && wkspc[wkspc_len - 1] == "\"")
-				quoted = true
-
-			if (quoted == true && wkspc[wkspc_len - 1] == "\"")
-				quoted = false
-
-			if (chevved == false && wkspc[wkspc_len - 1] == "<")
+		var len_response = response.length();
+        for (var ofs_response = 0; idx < len_response; ++ofs_response)
+			if (stage == 0)
+				len_profile_link = 0;
+				cnt_nested_elements = 0;
+				quoted = false;
+				chevved = false;
+				tagged = false;
+				skip_close_tags = true;
+				skipping_close_tag = false;
+				cnt_nested_elements = 0;
+		
+			if (response[ofs_response] == "\")
+					if (quoted == false)
+						quoted = true
+					else
+						quoted = false
+				
+			if (chevved == false && response[ofs_response] == "<")
 				chevved = true
 		
-			if (chevved == true && wkspc[wkspc_len - 1] == ">")
+			if (chevved == true && response[ofs_response] == ">")
 				tagged = true
 				chevved = false
 
-			if (tagged == true && wkspc[wkspc_len - 2] == "<" && wkspc[wkspc_len - 1] == "/")
-				if (skip_close_tags)
+			if (tagged == true && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/")
+				if (skip_close_tags == true)
 					skipping_close_tag = true
 		
 				tagged = false
 
-			if (skipping_close_tag == true && wkspc[wkspc_len - 1] == ">")
-				wkspc = ""
-				wkspc_len = 0
+			if (skipping_close_tag == true && response[ofs_response] == ">")
 				skipping_close_tag = false
 
             match stage:
                 case 0:
-                    if (wkspc_len < 3)
-					    continue
-
-				    if (chevved == true && quoted == false && wkspc[0] == '<' && wkspc[1] == 'a' && wkspc[2] == ' ')
+				    if (chevved == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 2] == '<' && response[ofs_response - 1] == 'a' && response[ofs_response] == ' ')
 					    stage = 1
-						wkspc = ""
-					    wkspc_len = 0
 						continue
 					
-				    else
-					    wkspc = ""
-					    wkspc_len = 0
-						continue
+					continue
 
                 case 1:
-					if (wkspc_len < 7 && wkspc[wkspc_len - 1] == ">")
+					if (response[ofs_response] == ">")
 						stage = 0
-						wkspc = ""
-						wkspc_len = 0
 						continue
 					
-				    if (wkspc_len == 7 && chevved == true && quoted == true && wkspc[0:6] == "class=\"")
+				    if (chevved == true && quoted == true && ((len_response - ofs_response) > 7) && response[ofs_response - 6 : ofs_response] == "class=\"")
 					    stage = 2
 						continue
 
-					if (wkspc_len > 7)
-						wkspc = ""
-						wkspc_len = 0
-						continue
+					continue
             
 				case 2:
-					if (wkspc_len < 18)
-						if (wkspc[wkspc_len - 1] == "\"")
-							stage = 1
-							wkspc = ""
-							wkspc_len = 0
-
+					if (response[ofs_response] != " " && response[ofs_response] != "\"")
 						continue
 
-				    if (wkspc_len == 18)
-						if (wkspc[wkspc_len - 1] != " " && wkspc[wkspc_len - 1] != "\"")
-							wkspc = ""
-					    	wkspc_len = 0
-					    	continue
-
-						if (wkspc[wkspc_len - 1] == "\"" && quoted == true)
-							stage = 0
-							wkspc = ""
-					    	wkspc_len = 0
-					    	continue
-
-                    	#winner, winner; chicken; dinner.
-				    	if (wkspc[0:16] == "profile-name-link")
-							stage = 3
-							wkspc = ""
-					    	wkspc_len = 0
-							continue
-
+					if (response[ofs_response] == "\"" && quoted == true)
+						stage = 0
 						continue
 
-					if (wkspc_len > 18)
-						wkspc = ""
-					    wkspc_len = 0
-					    continue
+					#winner, winner; chicken; dinner.
+					if (((len_response - ofs_response) > 17) && response[ofs_response - 17 : ofs_response - 1] == "profile-name-link")
+						stage = 3
+						continue
+
+					if (response[ofs_response] == "\"")
+						stage = 1
+						continue
+
+					continue
 
 	        	case 3:
-					if (wkspc[wkspc_len - 1] == '>')
-						#is tagged, but treat as untagged
-						tagged = false
+					if (response[ofs_response] == '>')
 						stage = 4
-						wkspc = ""
-						wkspc_len = 0
 						continue
-
-					if (wkspc_len == 4)
-						wkspc = ""
-						wkspc_len = 0
 
 					continue
                 
 				case 4:
-            		if (wkspc_len == PROFILE_LINK_MAX__LENGTH)
-            			stage = 0
-                		wkspc = ""
-						wkspc_len = 0
-						continue
+					if (response[ofs_response - 1] == "<" && response[ofs_response] != "/")
+						if (len_profile_link > 0)
+							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
+							stage = 0
+							continue
+						else
+							++cnt_nested_elements;
+							continue
 
-					#seeking 'top-level' text: untagged
-					if (tagged == true || skipping_close_tag == true)
-						continue
+					if (response[ofs_response - 1] == "<" && response[ofs_response] == "/")
+						if (cnt_nested_elements == 0)
+							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
+							stage = 0
+							continue
+						else
+							--cnt_nested_elements;
+							continue
 
-					if (wkspc_len >= (PROFILE_LINK_MIN__LENGTH + 1) && wkspc[wkspc_len - 1] == "<")
-						account_list.append(wkspc[0:-2])
-						stage = 0
-    	            	wkspc = ""
-						wkspc_len = 0
+					if (cnt_nested_elements == 0)
+						len_profile_link++
+						continue
+							 
+					continue
 
         return({"user": account_list, "error": None})
     except:
