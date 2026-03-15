@@ -127,10 +127,10 @@ def dumpor(name):
 				cnt_nested_elements = 0;
 		
 			if (response[ofs_response] == "\")
-					if (quoted == false)
-						quoted = true
-					else
-						quoted = false
+				if (quoted == false)
+					quoted = true
+				else
+					quoted = false
 				
 			if (chevved == false && response[ofs_response] == "<")
 				chevved = true
