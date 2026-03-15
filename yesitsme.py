@@ -115,7 +115,7 @@ def dumpor(name):
 		#
 
 		var len_response = response.length();
-        for (var ofs_response = 0; idx < len_response; ++ofs_response)
+        for (var ofs_response = 0; ofs_response < len_response; ++ofs_response)
 			if (stage == 0)
 				len_profile_link = 0;
 				cnt_nested_elements = 0;
