@@ -132,20 +132,20 @@ def dumpor(name):
 				else
 					quoted = false
 				
-			if (chevved == false && response[ofs_response] == "<")
+			if (chevved == false && quoted == false && response[ofs_response] == "<")
 				chevved = true
 		
-			if (chevved == true && response[ofs_response] == ">")
+			if (chevved == true && quoted == false && response[ofs_response] == ">")
 				tagged = true
 				chevved = false
 
-			if (tagged == true && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/")
+			if (tagged == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/")
 				if (skip_close_tags == true)
 					skipping_close_tag = true
 		
 				tagged = false
 
-			if (skipping_close_tag == true && response[ofs_response] == ">")
+			if (skipping_close_tag == true && quoted == false && response[ofs_response] == ">")
 				skipping_close_tag = false
 
             match stage:
@@ -157,7 +157,7 @@ def dumpor(name):
 					continue
 
                 case 1:
-					if (response[ofs_response] == ">")
+					if (quoted == false && response[ofs_response] == ">")
 						stage = 0
 						continue
 					
@@ -171,24 +171,23 @@ def dumpor(name):
 					if (response[ofs_response] != " " && response[ofs_response] != "\"")
 						continue
 
-					if (response[ofs_response] == "\"" && quoted == true)
-						stage = 0
-						continue
-
 					#winner, winner; chicken; dinner.
 					if (((len_response - ofs_response) > 17) && response[ofs_response - 17 : ofs_response - 1] == "profile-name-link")
 						stage = 3
 						continue
-
+							 
 					if (response[ofs_response] == "\"")
 						stage = 1
 						continue
 
 					continue
 
-	        	case 3:
+	        	case 3:							 
 					if (response[ofs_response] == '>')
-						stage = 4
+						if (response[ofs_response - 1] == "/")
+							stage = 0
+						else
+							stage = 4
 						continue
 
 					continue
