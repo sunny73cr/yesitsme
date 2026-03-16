@@ -83,6 +83,70 @@ def advanced_lookup(username):
     except:
         return({"user": None, "error": "rate limit"})
 
+# It looks like you are building a custom manual parser to extract profile links from HTML strings.
+# While this approach avoids heavy dependencies, manual state machines for HTML can be very "brittle"
+# because HTML is notoriously inconsistent (attribute order, spacing, and nested tags can easily break your stage logic).
+#
+# Here is an improved version of your logic. I have streamlined the state transitions,
+# fixed potential indexing errors, and made the code more readable.
+
+def extract_profiles(response):
+    account_list = []
+    try:
+        len_response = len(response)
+        stage = 0  # 0: Searching for <a, 1: In <a> tag, 2: Found class, 3: Extracting Text
+        
+        # Temporary buffers
+        current_text = ""
+        in_quotes = False
+        
+        i = 0
+        while i < len_response:
+            char = response[i]
+
+            # Toggle quote state to avoid getting confused by > or < inside attribute values
+            if char == '"' or char == "'":
+                in_quotes = not in_quotes
+
+            # STATE 0: Look for start of an anchor tag
+            if stage == 0:
+                if char == '<' and response[i+1:i+3] == "a ":
+                    stage = 1
+                    i += 2
+                    continue
+
+            # STATE 1: Inside <a> tag, looking for the specific class
+            elif stage == 1:
+                if not in_quotes:
+                    if char == '>': # End of opening tag, didn't find class
+                        stage = 0
+                    elif response[i:i+23] == 'class="profile-name-link"':
+                        stage = 2
+                        i += 22
+                
+            # STATE 2: Found class, move to the end of the opening <a> tag
+            elif stage == 2:
+                if char == '>' and not in_quotes:
+                    current_text = ""
+                    stage = 3
+
+            # STATE 3: Collecting the text content until the next tag starts
+            elif stage == 3:
+                # Look for the closing tag </a
+                if char == '<' and response[i+1:i+3] == "/a":
+                    if current_text.strip():
+                        account_list.append(current_text.strip())
+                    stage = 0
+                    i += 3
+                else:
+                    current_text += char
+
+            i += 1
+
+        return {"user": account_list, "error": None}
+    except Exception as e:
+        return {"user": None, "error": str(e)}
+
 
 def dumpor(name):
     url = "https://dumpor.com/search?query="
@@ -90,137 +154,13 @@ def dumpor(name):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
 
     req = url + name.replace(" ", "+")
-
+	
     try:
         account_list = []
         response = requests.get(req, headers=headers)
-
-		#e.g. https://www.instagram.com/profile/my_user_account
-		var PROFILE_LINK_MIN__LENGTH = 64;
-		var PROFILE_LINK_MAX__LENGTH = 2048;
-		var len_profile_link = 0;
-		#Parse state
-        var stage = 0;
-		#
-		var quoted = false;
-		var chevved = false;
-		var tagged = false;
-		var skip_close_tags = true;
-		var skipping_close_tag = false;
-		var cnt_nested_elements = 0;
-		#
-		#Parse tree state
-		#def node_root = 0, node_head = 1, node_body = 2, node_foot = 3, node_a = 4, node_div = 5, node_span = 6, node_select = 7, node_input = 8 
-		#e.g. var depth_tracker = [ node_root, node_body, node_div, node_span ]
-		#
-
-		var len_response = response.length();
-        for (var ofs_response = 0; ofs_response < len_response; ++ofs_response)
-			if (stage == 0)
-				len_profile_link = 0;
-				cnt_nested_elements = 0;
-				quoted = false;
-				chevved = false;
-				tagged = false;
-				skip_close_tags = true;
-				skipping_close_tag = false;
-				cnt_nested_elements = 0;
-		
-			if (response[ofs_response] == "\")
-				if (quoted == false)
-					quoted = true
-				else
-					quoted = false
-				
-			if (chevved == false && quoted == false && response[ofs_response] == "<")
-				chevved = true
-		
-			if (chevved == true && quoted == false && response[ofs_response] == ">")
-				tagged = true
-				chevved = false
-
-			if (tagged == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/")
-				if (skip_close_tags == true)
-					skipping_close_tag = true
-		
-				tagged = false
-
-			if (skipping_close_tag == true && quoted == false && response[ofs_response] == ">")
-				skipping_close_tag = false
-
-            match stage:
-                case 0:
-				    if (chevved == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 2] == '<' && response[ofs_response - 1] == 'a' && response[ofs_response] == ' ')
-					    stage = 1
-						continue
-					
-					continue
-
-                case 1:
-					if (quoted == false && response[ofs_response] == ">")
-						stage = 0
-						continue
-					
-				    if (chevved == true && quoted == true && ((len_response - ofs_response) > 7) && response[ofs_response - 6 : ofs_response] == "class=\"")
-					    stage = 2
-						continue
-
-					continue
-            
-				case 2:
-					if (response[ofs_response] != " " && response[ofs_response] != "\"")
-						continue
-
-					#winner, winner; chicken; dinner.
-					if (((len_response - ofs_response) > 17) && response[ofs_response - 17 : ofs_response - 1] == "profile-name-link")
-						stage = 3
-						continue
-							 
-					if (response[ofs_response] == "\"")
-						stage = 1
-						continue
-
-					continue
-
-	        	case 3:							 
-					if (response[ofs_response] == '>')
-						if (response[ofs_response - 1] == "/")
-							stage = 0
-						else
-							stage = 4
-						continue
-
-					continue
-                
-				case 4:
-					if (response[ofs_response - 1] == "<" && response[ofs_response] != "/")
-						if (len_profile_link > 0)
-							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
-							stage = 0
-							continue
-						else
-							++cnt_nested_elements;
-							continue
-
-					if (response[ofs_response - 1] == "<" && response[ofs_response] == "/")
-						if (cnt_nested_elements == 0)
-							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
-							stage = 0
-							continue
-						else
-							--cnt_nested_elements;
-							continue
-
-					if (cnt_nested_elements == 0)
-						len_profile_link++
-						continue
-							 
-					continue
-
-        return({"user": account_list, "error": None})
-    except:
-        return({"user": None, "error": "rate limit"})
-
+		return extract_profiles(response)
+    except Exception as e:
+        return {"user": None, "error": str(e)}
 
 def main():
     banner()
