@@ -115,8 +115,8 @@ def dumpor(name):
 		#
 
 		var len_response = response.length();
-        for (var ofs_response = 0; ofs_response < len_response; ++ofs_response)
-			if (stage == 0)
+        for ofs_response in range(0, len_response):
+			if stage == 0:
 				len_profile_link = 0;
 				cnt_nested_elements = 0;
 				quoted = false;
@@ -126,92 +126,93 @@ def dumpor(name):
 				skipping_close_tag = false;
 				cnt_nested_elements = 0;
 		
-			if (response[ofs_response] == "\")
-				if (quoted == false)
+			if response[ofs_response] == "\":
+				if quoted == false:
 					quoted = true
-				else
+			    else:
 					quoted = false
 				
-			if (chevved == false && quoted == false && response[ofs_response] == "<")
+			if chevved == false && quoted == false && response[ofs_response] == "<":
 				chevved = true
 		
-			if (chevved == true && quoted == false && response[ofs_response] == ">")
+			if chevved == true && quoted == false && response[ofs_response] == ">":
 				tagged = true
 				chevved = false
 
-			if (tagged == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/")
-				if (skip_close_tags == true)
+			if tagged == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 1] == "<" && response[ofs_response] == "/":
+				if skip_close_tags == true:
 					skipping_close_tag = true
 		
 				tagged = false
 
-			if (skipping_close_tag == true && quoted == false && response[ofs_response] == ">")
+			if skipping_close_tag == true && quoted == false && response[ofs_response] == ">":
 				skipping_close_tag = false
 
             match stage:
                 case 0:
-				    if (chevved == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 2] == '<' && response[ofs_response - 1] == 'a' && response[ofs_response] == ' ')
+				    if chevved == true && quoted == false && ((len_response - ofs_response) > 2) && response[ofs_response - 2] == '<' && response[ofs_response - 1] == 'a' && response[ofs_response] == ' ':
 					    stage = 1
 						continue
 					
 					continue
 
                 case 1:
-					if (quoted == false && response[ofs_response] == ">")
+					if quoted == false && response[ofs_response] == ">":
 						stage = 0
 						continue
 					
-				    if (chevved == true && quoted == true && ((len_response - ofs_response) > 7) && response[ofs_response - 6 : ofs_response] == "class=\"")
+				    if chevved == true && quoted == true && ((len_response - ofs_response) > 7) && response[ofs_response - 6 : ofs_response] == "class=\"":
 					    stage = 2
 						continue
 
 					continue
             
 				case 2:
-					if (response[ofs_response] != " " && response[ofs_response] != "\"")
+					if response[ofs_response] != " " && response[ofs_response] != "\"":
 						continue
 
 					#winner, winner; chicken; dinner.
-					if (((len_response - ofs_response) > 17) && response[ofs_response - 17 : ofs_response - 1] == "profile-name-link")
+					if ((len_response - ofs_response) > 17) && response[ofs_response - 17 : ofs_response - 1] == "profile-name-link":
 						stage = 3
 						continue
 							 
-					if (response[ofs_response] == "\"")
+					if response[ofs_response] == "\"":
 						stage = 1
 						continue
 
 					continue
 
 	        	case 3:							 
-					if (response[ofs_response] == '>')
-						if (response[ofs_response - 1] == "/")
+					if response[ofs_response] == '>':
+						if response[ofs_response - 1] == "/":
 							stage = 0
-						else
+						else:
 							stage = 4
+							
 						continue
 
 					continue
                 
 				case 4:
-					if (response[ofs_response - 1] == "<" && response[ofs_response] != "/")
-						if (len_profile_link > 0)
+					if response[ofs_response - 1] == "<" && response[ofs_response] != "/":
+						if len_profile_link > 0:
 							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
 							stage = 0
 							continue
-						else
+						else:
 							++cnt_nested_elements;
 							continue
 
-					if (response[ofs_response - 1] == "<" && response[ofs_response] == "/")
-						if (cnt_nested_elements == 0)
+					if response[ofs_response - 1] == "<" && response[ofs_response] == "/":
+						if cnt_nested_elements == 0:
 							account_list.append(response[ofs_response - len_profile_link : ofs_response - 2])
 							stage = 0
 							continue
-						else
+						else:
 							--cnt_nested_elements;
 							continue
 
-					if (cnt_nested_elements == 0)
+					if cnt_nested_elements == 0:
 						len_profile_link++
 						continue
 							 
