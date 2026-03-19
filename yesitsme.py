@@ -96,25 +96,25 @@ def dumpor(name):
         response = requests.get(req, headers=headers)
 
 		#e.g. https://www.instagram.com/profile/my_user_account
-		var PROFILE_LINK_MIN__LENGTH = 64;
-		var PROFILE_LINK_MAX__LENGTH = 2048;
-		var len_profile_link = 0;
+		PROFILE_LINK_MIN__LENGTH = 64;
+		PROFILE_LINK_MAX__LENGTH = 2048;
+		len_profile_link = 0;
 		#Parse state
-        var stage = 0;
+        stage = 0;
 		#
-		var quoted = false;
-		var chevved = false;
-		var tagged = false;
-		var skip_close_tags = true;
-		var skipping_close_tag = false;
-		var cnt_nested_elements = 0;
+		quoted = false;
+		chevved = false;
+		tagged = false;
+		skip_close_tags = true;
+		skipping_close_tag = false;
+		cnt_nested_elements = 0;
 		#
 		#Parse tree state
 		#def node_root = 0, node_head = 1, node_body = 2, node_foot = 3, node_a = 4, node_div = 5, node_span = 6, node_select = 7, node_input = 8 
 		#e.g. var depth_tracker = [ node_root, node_body, node_div, node_span ]
 		#
 
-		var len_response = response.length();
+		len_response = response.length();
         for ofs_response in range(0, len_response):
 			if stage == 0:
 				len_profile_link = 0;
